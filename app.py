@@ -1,101 +1,199 @@
 import os
 import streamlit as st
+from dotenv import load_dotenv
+
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+from langchain_google_genai import (
+    GoogleGenerativeAIEmbeddings,
+    ChatGoogleGenerativeAI
+)
+
 
 # ==========================================
-# 1. CONFIGURAÇÃO DA PÁGINA E CREDENCIAIS
+# CARREGA AS VARIÁVEIS DO ARQUIVO .env
+# ==========================================
+load_dotenv()
+
+
+# ==========================================
+# 1. CONFIGURAÇÃO DA PÁGINA
 # ==========================================
 st.set_page_config(
-    page_title="Trabalho Garantido", 
-    page_icon="🎓", 
+    page_title="Trabalho Garantido",
+    page_icon="🎓",
     layout="centered",
     initial_sidebar_state="auto"
 )
 
-# Truque para forçar o navegador a entender que a página é em Português e desativar o tradutor automático
-st.markdown(
-    """
-    <script>
-        var doc = window.parent.document;
-        doc.documentElement.lang = 'pt-BR';
-    </script>
-    """,
-    unsafe_allow_html=True
-)
+
+# ==========================================
+# PERSONALIZAÇÃO VISUAL - FMU TECH
+# ==========================================
+
+st.markdown("""
+<style>
+
+/* Fundo geral */
+.stApp {
+    background-color: #F7F4FC;
+}
+
+/* Título principal */
+h1 {
+    color: #7C22F5 !important;
+    font-weight: 800 !important;
+}
+
+/* Texto abaixo do título */
+.stApp p {
+    color: #29232F;
+}
+
+/* Caixa onde o usuário digita */
+div[data-testid="stChatInput"] {
+    border: 2px solid #8A2BFF;
+    border-radius: 14px;
+    box-shadow: 0 0 10px rgba(138, 43, 255, 0.18);
+}
+
+/* Mensagens do chat */
+div[data-testid="stChatMessage"] {
+    background-color: #FFFFFF;
+    border-left: 5px solid #8A2BFF;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(60, 20, 100, 0.08);
+}
+
+/* Spinner */
+div[data-testid="stSpinner"] {
+    color: #8A2BFF;
+}
+
+/* Cursor e detalhes do campo */
+textarea {
+    caret-color: #8A2BFF !important;
+}
+
+/* Links */
+a {
+    color: #7C22F5 !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 
 st.title("🎓 Assistente Virtual Trabalho Garantido")
+
 st.write(
     "Faça perguntas sobre o edital do programa e tire suas dúvidas "
     "com base nos documentos oficiais."
 )
 
-# Configurar a chave de API
-# Verifica primeiro nos Secrets da nuvem e depois
-# nas variáveis de ambiente locais
+
+# ==========================================
+# 2. CONFIGURAÇÃO DA CHAVE DA API
+# ==========================================
+
 google_api_key = None
 
+# No Streamlit Cloud, procura primeiro nos Secrets
 try:
     if "GOOGLE_API_KEY" in st.secrets:
         google_api_key = st.secrets["GOOGLE_API_KEY"]
 except Exception:
     pass
 
+# Localmente, procura a chave carregada do .env
 if not google_api_key:
     google_api_key = os.environ.get("GOOGLE_API_KEY")
 
 if google_api_key:
+    google_api_key = google_api_key.strip().strip('"').strip("'")
     os.environ["GOOGLE_API_KEY"] = google_api_key
+
 else:
     st.error(
         "A chave GOOGLE_API_KEY não foi encontrada. "
-        "Certifique-se de que a definiu no terminal "
-        "ou nos Secrets do Streamlit."
+        "Certifique-se de que ela foi configurada "
+        "no arquivo .env ou nos Secrets do Streamlit."
     )
     st.stop()
 
 
 # ==========================================
-# 2. INICIALIZAÇÃO E CACHE DO RAG
+# 3. INICIALIZAÇÃO E CACHE DO RAG
 # ==========================================
+
 @st.cache_resource
 def inicializar_rag():
 
     pdf_path = "EDITAL-Trabalho-Garantido-26-2.pdf"
 
+    # Verifica se o PDF existe
     if not os.path.exists(pdf_path):
-        return None, None, "Arquivo PDF do edital não encontrado na pasta do projeto!"
+        return (
+            None,
+            None,
+            "Arquivo PDF do edital não encontrado "
+            "na pasta do projeto!"
+        )
 
-    # A. Carregamento e Fatiamento do PDF
+    # --------------------------------------
+    # A. CARREGAMENTO DO PDF
+    # --------------------------------------
+
     loader = PyPDFLoader(pdf_path)
     documentos = loader.load()
+
+    # --------------------------------------
+    # B. DIVISÃO DO TEXTO EM CHUNKS
+    # --------------------------------------
 
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200
     )
 
-    blocos_texto = text_splitter.split_documents(documentos)
+    blocos_texto = text_splitter.split_documents(
+        documentos
+    )
 
-    # B. Criação da Base Vetorial
-    # Embeddings + ChromaDB
+    # --------------------------------------
+    # C. CRIAÇÃO DOS EMBEDDINGS
+    # --------------------------------------
+
     embeddings = GoogleGenerativeAIEmbeddings(
         model="gemini-embedding-2"
     )
+
+    # --------------------------------------
+    # D. CRIAÇÃO DO BANCO VETORIAL
+    # --------------------------------------
 
     banco_vetorial = Chroma.from_documents(
         blocos_texto,
         embeddings
     )
 
+    # --------------------------------------
+    # E. CONFIGURAÇÃO DO RETRIEVER
+    # --------------------------------------
+
     retriever = banco_vetorial.as_retriever(
-        search_kwargs={"k": 3}
+        search_kwargs={
+            "k": 3
+        }
     )
 
-    # C. Instancia o LLM do Gemini
+    # --------------------------------------
+    # F. CONFIGURAÇÃO DO GEMINI
+    # --------------------------------------
+
     llm = ChatGoogleGenerativeAI(
         model="gemini-3.6-flash",
         temperature=0
@@ -104,9 +202,16 @@ def inicializar_rag():
     return retriever, llm, None
 
 
-# Executa o carregamento
-with st.spinner("Processando o edital e preparando o assistente..."):
+# ==========================================
+# 4. CARREGAMENTO DO RAG
+# ==========================================
+
+with st.spinner(
+    "Processando o edital e preparando o assistente..."
+):
+
     retriever, llm, erro = inicializar_rag()
+
 
 if erro:
     st.error(erro)
@@ -114,71 +219,233 @@ if erro:
 
 
 # ==========================================
-# 3. GERENCIAMENTO DO HISTÓRICO DE MENSAGENS
+# 5. HISTÓRICO DAS MENSAGENS
 # ==========================================
+
 if "mensagens" not in st.session_state:
     st.session_state.mensagens = []
 
-# Exibe o histórico na tela
+
+# Exibe mensagens anteriores
 for mensagem in st.session_state.mensagens:
-    with st.chat_message(mensagem["role"]):
-        st.markdown(mensagem["content"])
+
+    with st.chat_message(
+        mensagem["role"]
+    ):
+
+        st.markdown(
+            mensagem["content"]
+        )
 
 
 # ==========================================
-# 4. INTERFACE INTERATIVA DO CHAT COM TRATAMENTO DE ERRO
+# 6. INTERFACE DO CHAT
 # ==========================================
-if pergunta := st.chat_input("Digite sua dúvida sobre o edital..."):
-    
-    # Salva e exibe a pergunta do usuário
-    st.session_state.mensagens.append({"role": "user", "content": pergunta})
+
+if pergunta := st.chat_input(
+    "Digite sua dúvida sobre o edital..."
+):
+
+    # --------------------------------------
+    # EXIBE A PERGUNTA DO USUÁRIO
+    # --------------------------------------
+
+    st.session_state.mensagens.append(
+        {
+            "role": "user",
+            "content": pergunta
+        }
+    )
+
     with st.chat_message("user"):
         st.markdown(pergunta)
 
-    # Processa a resposta buscando os trechos e consultando o Gemini de forma segura
+
+    # --------------------------------------
+    # PROCESSAMENTO DA RESPOSTA
+    # --------------------------------------
+
     with st.chat_message("assistant"):
-        with st.spinner("Pesquisando no edital..."):
+
+        with st.spinner(
+            "Pesquisando no edital..."
+        ):
+
             try:
-                # 1. Busca os documentos relevantes no ChromaDB
-                documentos_relacionados = retriever.invoke(pergunta)
-                contexto = "\n\n".join([doc.page_content for doc in documentos_relacionados])
-                
-                # 2. Monta o prompt com o contexto e restrições anti-alucinação
-                prompt_completo = (
-                    "Você é um assistente virtual especializado no Edital do Programa Trabalho Garantido da FMU.\n"
-                    "Use estritamente os trechos do edital fornecidos abaixo para responder à pergunta do usuário.\n"
-                    "Se não souber a resposta ou se ela não estiver no texto, diga honestamente que não encontrou.\n\n"
-                    f"Contexto do edital:\n{contexto}\n\n"
-                    f"Pergunta do usuário: {pergunta}"
+
+                # ==================================
+                # 1. RECUPERA OS TRECHOS DO EDITAL
+                # ==================================
+
+                documentos_relacionados = (
+                    retriever.invoke(pergunta)
                 )
-                
-                # 3. Invoca o modelo diretamente
-                resposta_llm = llm.invoke(prompt_completo)
-                
-                # Extrai o texto limpo da resposta
-                if hasattr(resposta_llm, 'content'):
-                    texto_resposta = resposta_llm.content
+
+                contexto = "\n\n".join(
+                    [
+                        doc.page_content
+                        for doc
+                        in documentos_relacionados
+                    ]
+                )
+
+                # ==================================
+                # 2. MONTA O PROMPT
+                # ==================================
+
+                prompt_completo = (
+                    "Você é um assistente virtual "
+                    "especializado no Edital do Programa "
+                    "Trabalho Garantido da FMU.\n\n"
+
+                    "Use estritamente os trechos do edital "
+                    "fornecidos abaixo para responder à "
+                    "pergunta do usuário.\n"
+
+                    "Se não souber a resposta ou se ela "
+                    "não estiver no texto, diga honestamente "
+                    "que não encontrou.\n\n"
+
+                    f"Contexto do edital:\n"
+                    f"{contexto}\n\n"
+
+                    f"Pergunta do usuário: "
+                    f"{pergunta}"
+                )
+
+                # ==================================
+                # 3. ENVIA PARA O GEMINI
+                # ==================================
+
+                resposta_llm = llm.invoke(
+                    prompt_completo
+                )
+
+                # ==================================
+                # 4. EXTRAI SOMENTE O TEXTO
+                # ==================================
+
+                if isinstance(
+                    resposta_llm.content,
+                    list
+                ):
+
+                    texto_resposta = "".join(
+
+                        bloco.get(
+                            "text",
+                            ""
+                        )
+
+                        for bloco
+                        in resposta_llm.content
+
+                        if isinstance(
+                            bloco,
+                            dict
+                        )
+
+                        and bloco.get(
+                            "type"
+                        ) == "text"
+                    )
+
                 else:
-                    texto_resposta = str(resposta_llm)
-                
-                st.markdown(texto_resposta)
-                
-                # Salva a resposta bem-sucedida no histórico
-                st.session_state.mensagens.append({"role": "assistant", "content": texto_resposta})
+
+                    texto_resposta = (
+                        resposta_llm.content
+                    )
+
+                # ==================================
+                # 5. EXIBE A RESPOSTA
+                # ==================================
+
+                st.markdown(
+                    texto_resposta
+                )
+
+                # ==================================
+                # 6. SALVA NO HISTÓRICO
+                # ==================================
+
+                st.session_state.mensagens.append(
+                    {
+                        "role": "assistant",
+                        "content": texto_resposta
+                    }
+                )
+
+            # ======================================
+            # TRATAMENTO DE ERROS
+            # ======================================
 
             except Exception as e:
-                # Tratamento amigável caso ocorra o erro 429 de cota excedida ou falha de rede
+
                 erro_str = str(e)
-                if "429" in erro_str or "RESOURCE_EXHAUSTED" in erro_str:
+
+                # ----------------------------------
+                # ERRO DE LIMITE DA API
+                # ----------------------------------
+
+                if (
+                    "429" in erro_str
+                    or
+                    "RESOURCE_EXHAUSTED" in erro_str
+                ):
+
                     texto_resposta = (
-                        "⚠️ **Ops! O limite de requisições gratuitas foi atingido temporariamente.**\n\n"
-                        "Como este assistente está rodando na camada gratuita da API do Gemini, "
-                        "ultrapassamos o número de consultas permitidas em um curto período. "
-                        "Por favor, aguarde alguns segundos ou tente novamente mais tarde!"
+                        "⚠️ **Ops! O limite de requisições "
+                        "da API foi atingido.**\n\n"
+
+                        "O serviço do Gemini atingiu o limite "
+                        "de consultas disponível no momento.\n\n"
+
+                        "Por favor, tente novamente mais tarde."
                     )
+
+                # ----------------------------------
+                # ERRO DE AUTENTICAÇÃO
+                # ----------------------------------
+
+                elif (
+                    "401" in erro_str
+                    or
+                    "UNAUTHENTICATED" in erro_str
+                ):
+
+                    texto_resposta = (
+                        "⚠️ **Não foi possível autenticar "
+                        "a conexão com o Gemini.**\n\n"
+
+                        "A chave da API não foi aceita pelo serviço."
+                    )
+
+                # ----------------------------------
+                # OUTROS ERROS
+                # ----------------------------------
+
                 else:
-                    texto_resposta = f"⚠️ Ocorreu um erro inesperado ao processar a sua pergunta: `{erro_str}`"
-                
-                st.error(texto_resposta)
-                # Opcional: salva a mensagem de aviso no histórico para manter o fluxo coerente
-                st.session_state.mensagens.append({"role": "assistant", "content": texto_resposta})
+
+                    texto_resposta = (
+                        "⚠️ Ocorreu um erro inesperado "
+                        "ao processar sua pergunta."
+                    )
+
+                # ----------------------------------
+                # EXIBE MENSAGEM AMIGÁVEL
+                # ----------------------------------
+
+                st.error(
+                    texto_resposta
+                )
+
+                # ----------------------------------
+                # SALVA MENSAGEM NO HISTÓRICO
+                # ----------------------------------
+
+                st.session_state.mensagens.append(
+                    {
+                        "role": "assistant",
+                        "content": texto_resposta
+                    }
+                )
