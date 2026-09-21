@@ -141,7 +141,7 @@ def inicializar_rag():
     )
 
     retriever = banco_vetorial.as_retriever(
-        search_kwargs={"k": 3}
+        search_kwargs={"k": 5}
     )
 
     # Modelo atualizado e em produção na API da Groq
@@ -197,12 +197,20 @@ if pergunta := st.chat_input("Digite sua dúvida sobre o edital..."):
                     [doc.page_content for doc in documentos_relacionados]
                 )
 
-                # 2. MONTA O PROMPT
+                # 2. MONTA O PROMPT ENRIQUECIDO COM O CRONOGRAMA FIXO
                 prompt_completo = (
                     "Você é um assistente virtual especializado no Edital do Programa Trabalho Garantido da FMU.\n\n"
-                    "Use estritamente os trechos do edital fornecidos abaixo para responder à pergunta do usuário.\n"
-                    "Se não souber a resposta ou se ela não estiver no texto, diga honestamente que não encontrou.\n\n"
-                    f"Contexto do edital:\n{contexto}\n\n"
+                    
+                    "CRONOGRAMA DO PROGRAMA (DADOS FIXOS E CRÍTICOS):\n"
+                    "- Divulgação do Edital e abertura das inscrições: 05/08/2026\n"
+                    "- Encerramento das inscrições: 20/11/2026\n"
+                    "- Divulgação dos aprovados: 30/11/2026\n"
+                    "- Início do PROGRAMA: 05/08/2026\n\n"
+
+                    "Use os trechos do edital fornecidos abaixo e o cronograma acima para responder à pergunta do usuário.\n"
+                    "Se a informação não puder ser extraída nem dos trechos e nem do cronograma acima, diga honestamente que não encontrou.\n\n"
+
+                    f"Contexto recuperado do edital:\n{contexto}\n\n"
                     f"Pergunta do usuário: {pergunta}"
                 )
 
