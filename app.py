@@ -85,7 +85,7 @@ st.write(
 # ==========================================
 groq_api_key = None
 
-# No Streamlit Cloud ou Local, procura primeiro nos Secrets (.streamlit/secrets.toml)
+# No Streamlit Cloud ou Local, procura nos Secrets
 try:
     if "GROQ_API_KEY" in st.secrets:
         groq_api_key = st.secrets["GROQ_API_KEY"]
@@ -96,7 +96,6 @@ except Exception:
 if not groq_api_key:
     groq_api_key = os.environ.get("GROQ_API_KEY")
 
-# Valida e injeta a credencial na memória do ambiente
 if groq_api_key:
     groq_api_key = groq_api_key.strip().strip('"').strip("'")
     os.environ["GROQ_API_KEY"] = groq_api_key
@@ -163,7 +162,7 @@ if erro:
     st.stop()
 
 # ==========================================
-# 5. HISTÓRICO DAS MENSAGENS
+# 5. HISTÓRICO DAS MENSAGENS (COM RETENÇÃO)
 # ==========================================
 if "mensagens" not in st.session_state:
     st.session_state.mensagens = []
@@ -196,6 +195,11 @@ if pergunta := st.chat_input("Digite sua dúvida sobre o edital..."):
                 contexto = "\n\n".join(
                     [doc.page_content for doc in documentos_relacionados]
                 )
+
+                # 🌟 TRATAMENTO DE TEXTO AVANÇADO: Limpa e formata todas as tags HTML vindas do PDF bruto
+                contexto = contexto.replace("<br>", "\n")
+                contexto = contexto.replace("<ul>", "").replace("</ul>", "")
+                contexto = contexto.replace("<li>", "- ").replace("</li>", "\n")
 
                 # 2. MONTA O PROMPT ENRIQUECIDO COM O CRONOGRAMA FIXO
                 prompt_completo = (
