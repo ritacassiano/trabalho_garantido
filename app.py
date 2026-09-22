@@ -26,49 +26,56 @@ st.set_page_config(
 )
 
 # ==========================================
-# PERSONALIZAÇÃO VISUAL - FMU TECH
+# PERSONALIZAÇÃO VISUAL - DESIGN SYSTEM FMU TECH
 # ==========================================
 st.markdown("""
 <style>
-/* Fundo geral */
+/* Fundo geral da aplicação (wash-violet) */
 .stApp {
-    background-color: #F7F4FC;
+    background-color: #F0E8FC;
 }
-/* Título principal */
+
+/* Título principal (brand) */
 h1 {
-    color: #7C22F5 !important;
+    color: #9933FF !important;
     font-weight: 800 !important;
 }
-/* Texto abaixo do título */
+
+/* Texto abaixo do título (text-muted) */
 .stApp p {
-    color: #29232F;
+    color: #3A3A3A;
 }
-/* Caixa onde o usuário digita */
+
+/* Caixa onde o usuário digita (borda em 'brand' com sombra suave) */
 div[data-testid="stChatInput"] {
-    border: 2px solid #8A2BFF;
+    border: 2px solid #9933FF;
     border-radius: 14px;
-    box-shadow: 0 0 10px rgba(138, 43, 255, 0.18);
+    box-shadow: 0 0 10px rgba(153, 51, 255, 0.15);
 }
-/* Mensagens do chat */
+
+/* Mensagens do chat (Fundo 'surface' com detalhe na lateral em 'brand') */
 div[data-testid="stChatMessage"] {
     background-color: #FFFFFF;
-    border-left: 5px solid #8A2BFF;
+    border-left: 5px solid #9933FF;
     border-radius: 12px;
     padding: 12px 16px;
     margin-bottom: 12px;
-    box-shadow: 0 2px 8px rgba(60, 20, 100, 0.08);
+    box-shadow: 0 2px 8px rgba(153, 51, 255, 0.05);
 }
-/* Spinner */
+
+/* Ícone de carregamento / Spinner (brand) */
 div[data-testid="stSpinner"] {
-    color: #8A2BFF;
+    color: #9933FF;
 }
-/* Cursor e detalhes do campo */
+
+/* Cursor e detalhes de digitação */
 textarea {
-    caret-color: #8A2BFF !important;
+    caret-color: #9933FF !important;
 }
-/* Links */
+
+/* Links em geral (brand) */
 a {
-    color: #7C22F5 !important;
+    color: #9933FF !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -162,13 +169,16 @@ if erro:
     st.stop()
 
 # ==========================================
-# 5. HISTÓRICO DAS MENSAGENS (COM RETENÇÃO)
+# 5. HISTÓRICO DAS MENSAGENS (COM RETENÇÃO DO MASCOTE)
 # ==========================================
 if "mensagens" not in st.session_state:
     st.session_state.mensagens = []
 
 for message in st.session_state.mensagens:
-    with st.chat_message(message["role"]):
+    # Atualizado com o nome do seu arquivo byte_3D.png
+    avatar_chat = "byte_3D.png" if message["role"] == "assistant" else "user"
+    
+    with st.chat_message(message["role"], avatar=avatar_chat):
         st.markdown(message["content"])
 
 # ==========================================
@@ -186,7 +196,8 @@ if pergunta := st.chat_input("Digite sua dúvida sobre o edital..."):
     with st.chat_message("user"):
         st.markdown(pergunta)
 
-    with st.chat_message("assistant"):
+    # Atualizado com o nome do seu arquivo byte_3D.png
+    with st.chat_message("assistant", avatar="byte_3D.png"):
         with st.spinner("Pesquisando no edital..."):
             try:
                 # 1. RECUPERA OS TRECHOS DO EDITAL
@@ -196,7 +207,7 @@ if pergunta := st.chat_input("Digite sua dúvida sobre o edital..."):
                     [doc.page_content for doc in documentos_relacionados]
                 )
 
-                # 🌟 TRATAMENTO DE TEXTO AVANÇADO: Limpa e formata todas as tags HTML vindas do PDF bruto
+                # TRATAMENTO DE TEXTO AVANÇADO: Limpa as tags HTML do PDF bruto
                 contexto = contexto.replace("<br>", "\n")
                 contexto = contexto.replace("<ul>", "").replace("</ul>", "")
                 contexto = contexto.replace("<li>", "- ").replace("</li>", "\n")
