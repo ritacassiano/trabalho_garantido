@@ -26,56 +26,71 @@ st.set_page_config(
 )
 
 # ==========================================
-# PERSONALIZAÇÃO VISUAL - DESIGN SYSTEM FMU TECH
+# PERSONALIZAÇÃO VISUAL - PALETA SUMMIT TECH DARK
 # ==========================================
 st.markdown("""
 <style>
-/* Fundo geral da aplicação (wash-violet) */
+/* Fundo geral da aplicação - Roxo Noturno do Banner */
 .stApp {
-    background-color: #F0E8FC;
+    background-color: #0B0813;
 }
 
-/* Título principal (brand) */
+/* Título principal - Neon Violeta Vibrante */
 h1 {
-    color: #9933FF !important;
+    color: #A855F7 !important;
     font-weight: 800 !important;
 }
 
-/* Texto abaixo do título (text-muted) */
+/* Texto abaixo do título - Branco acinzentado de alto contraste */
 .stApp p {
-    color: #3A3A3A;
+    color: #E2E8F0;
 }
 
-/* Caixa onde o usuário digita (borda em 'brand' com sombra suave) */
+/* Caixa onde o usuário digita (Fundo escuro com borda neon) */
 div[data-testid="stChatInput"] {
     border: 2px solid #9933FF;
     border-radius: 14px;
-    box-shadow: 0 0 10px rgba(153, 51, 255, 0.15);
+    background-color: #13111C;
+    box-shadow: 0 0 15px rgba(153, 51, 255, 0.3);
 }
 
-/* Mensagens do chat (Fundo 'surface' com detalhe na lateral em 'brand') */
+/* Ajuste do campo de digitação interno */
+textarea {
+    color: #FFFFFF !important;
+    caret-color: #A855F7 !important;
+}
+
+/* Mensagens do chat (Fundo Dark Tech com borda lateral brilhante) */
 div[data-testid="stChatMessage"] {
-    background-color: #FFFFFF;
+    background-color: #13111C;
     border-left: 5px solid #9933FF;
     border-radius: 12px;
-    padding: 12px 16px;
+    padding: 16px;
     margin-bottom: 12px;
-    box-shadow: 0 2px 8px rgba(153, 51, 255, 0.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
-/* Ícone de carregamento / Spinner (brand) */
+/* AJUSTE EXTRA: Força o texto dentro do balão a ficar branco */
+div[data-testid="stChatMessage"] p, div[data-testid="stChatMessage"] li {
+    color: #FFFFFF !important;
+}
+
+/* TRUQUE CSS: Aumenta o tamanho físico das imagens dos avatares no chat */
+div[data-testid="stChatMessage"] img {
+    width: 52px !important;
+    height: 52px !important;
+    max-width: 52px !important;
+    max-height: 52px !important;
+}
+
+/* Ícone de carregamento / Spinner */
 div[data-testid="stSpinner"] {
-    color: #9933FF;
+    color: #A855F7;
 }
 
-/* Cursor e detalhes de digitação */
-textarea {
-    caret-color: #9933FF !important;
-}
-
-/* Links em geral (brand) */
+/* Links em geral */
 a {
-    color: #9933FF !important;
+    color: #A855F7 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -92,14 +107,12 @@ st.write(
 # ==========================================
 groq_api_key = None
 
-# No Streamlit Cloud ou Local, procura nos Secrets
 try:
     if "GROQ_API_KEY" in st.secrets:
         groq_api_key = st.secrets["GROQ_API_KEY"]
 except Exception:
     pass
 
-# Se não encontrar nos secrets, procura a chave carregada do .env
 if not groq_api_key:
     groq_api_key = os.environ.get("GROQ_API_KEY")
 
@@ -136,7 +149,6 @@ def inicializar_rag():
     )
     blocos_texto = text_splitter.split_documents(documentos)
 
-    # Embeddings locais e gratuitos do Hugging Face
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
@@ -150,7 +162,6 @@ def inicializar_rag():
         search_kwargs={"k": 5}
     )
 
-    # Modelo atualizado e em produção na API da Groq
     llm = ChatGroq(
         model="openai/gpt-oss-120b",
         temperature=0
@@ -169,14 +180,13 @@ if erro:
     st.stop()
 
 # ==========================================
-# 5. HISTÓRICO DAS MENSAGENS (COM RETENÇÃO DO MASCOTE)
+# 5. HISTÓRICO DAS MENSAGENS (COM OS NOVOS AVATARES 3D)
 # ==========================================
 if "mensagens" not in st.session_state:
     st.session_state.mensagens = []
 
 for message in st.session_state.mensagens:
-    # Atualizado com o nome do seu arquivo byte_3D.png
-    avatar_chat = "byte_3D.png" if message["role"] == "assistant" else "user"
+    avatar_chat = "byte_rosto.png" if message["role"] == "assistant" else "aluno_avatar.png"
     
     with st.chat_message(message["role"], avatar=avatar_chat):
         st.markdown(message["content"])
@@ -193,46 +203,38 @@ if pergunta := st.chat_input("Digite sua dúvida sobre o edital..."):
         }
     )
 
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar="aluno_avatar.png"):
         st.markdown(pergunta)
 
-    # Atualizado com o nome do seu arquivo byte_3D.png
-    with st.chat_message("assistant", avatar="byte_3D.png"):
+    with st.chat_message("assistant", avatar="byte_rosto.png"):
         with st.spinner("Pesquisando no edital..."):
             try:
-                # 1. RECUPERA OS TRECHOS DO EDITAL
                 documentos_relacionados = retriever.invoke(pergunta)
 
                 contexto = "\n\n".join(
                     [doc.page_content for doc in documentos_relacionados]
                 )
 
-                # TRATAMENTO DE TEXTO AVANÇADO: Limpa as tags HTML do PDF bruto
+                # TRATAMENTO DE TEXTO AVANÇADO: Limpa as marcas HTML vindas do PDF bruto
                 contexto = contexto.replace("<br>", "\n")
                 contexto = contexto.replace("<ul>", "").replace("</ul>", "")
                 contexto = contexto.replace("<li>", "- ").replace("</li>", "\n")
 
-                # 2. MONTA O PROMPT ENRIQUECIDO COM O CRONOGRAMA FIXO
                 prompt_completo = (
                     "Você é um assistente virtual especializado no Edital do Programa Trabalho Garantido da FMU.\n\n"
-                    
                     "CRONOGRAMA DO PROGRAMA (DADOS FIXOS E CRÍTICOS):\n"
                     "- Divulgação do Edital e abertura das inscrições: 05/08/2026\n"
                     "- Encerramento das inscrições: 20/11/2026\n"
                     "- Divulgação dos aprovados: 30/11/2026\n"
                     "- Início do PROGRAMA: 05/08/2026\n\n"
-
                     "Use os trechos do edital fornecidos abaixo e o cronograma acima para responder à pergunta do usuário.\n"
                     "Se a informação não puder ser extraída nem dos trechos e nem do cronograma acima, diga honestamente que não encontrou.\n\n"
-
                     f"Contexto recuperado do edital:\n{contexto}\n\n"
                     f"Pergunta do usuário: {pergunta}"
                 )
 
-                # 3. ENVIA PARA A GROQ
                 resposta_llm = llm.invoke(prompt_completo)
 
-                # 4. EXTRAI SOMENTE O TEXTO
                 if isinstance(resposta_llm.content, list):
                     texto_resposta = "".join(
                         bloco.get("text", "")
@@ -242,7 +244,6 @@ if pergunta := st.chat_input("Digite sua dúvida sobre o edital..."):
                 else:
                     texto_resposta = resposta_llm.content
 
-                # 5. EXIBE A RESPOSTA
                 st.markdown(texto_resposta)
 
                 st.session_state.mensagens.append(
