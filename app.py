@@ -26,7 +26,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# PERSONALIZAÇÃO VISUAL - PALETA SUMMIT TECH DARK
+# PERSONALIZAÇÃO VISUAL - PALETA SUMMIT TECH DARK CORRIGIDA
 # ==========================================
 st.markdown("""
 <style>
@@ -50,14 +50,21 @@ h1 {
 div[data-testid="stChatInput"] {
     border: 2px solid #9933FF;
     border-radius: 14px;
-    background-color: #13111C;
+    background-color: #13111C !important;
     box-shadow: 0 0 15px rgba(153, 51, 255, 0.3);
 }
 
-/* Ajuste do campo de digitação interno */
-textarea {
+/* Força o texto digitado na caixa de entrada a ficar branco e visível */
+div[data-testid="stChatInput"] textarea {
     color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
     caret-color: #A855F7 !important;
+}
+
+/* Torna o texto de sugestão (placeholder) legível em cinza claro */
+div[data-testid="stChatInput"] textarea::placeholder {
+    color: #A0AEC0 !important;
+    -webkit-text-fill-color: #A0AEC0 !important;
 }
 
 /* Mensagens do chat (Fundo Dark Tech com borda lateral brilhante) */
@@ -70,12 +77,12 @@ div[data-testid="stChatMessage"] {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
-/* AJUSTE EXTRA: Força o texto dentro do balão a ficar branco */
+/* Força o texto dentro dos balões de mensagens anteriores a ficar branco */
 div[data-testid="stChatMessage"] p, div[data-testid="stChatMessage"] li {
     color: #FFFFFF !important;
 }
 
-/* TRUQUE CSS: Aumenta o tamanho físico das imagens dos avatares no chat */
+/* Aumenta o tamanho físico das imagens dos avatares no chat */
 div[data-testid="stChatMessage"] img {
     width: 52px !important;
     height: 52px !important;
@@ -180,13 +187,14 @@ if erro:
     st.stop()
 
 # ==========================================
-# 5. HISTÓRICO DAS MENSAGENS (COM OS NOVOS AVATARES 3D)
+# 5. HISTÓRICO DAS MENSAGENS (COM OS NOVOS AVATARES 3D CORRIGIDOS)
 # ==========================================
 if "mensagens" not in st.session_state:
     st.session_state.mensagens = []
 
 for message in st.session_state.mensagens:
-    avatar_chat = "byte_rosto.png" if message["role"] == "assistant" else "aluno_avatar.png"
+    # 🌟 Atualizado: Mapeia para o nome real aluno_chatbot.png
+    avatar_chat = "byte_rosto.png" if message["role"] == "assistant" else "aluno_chatbot.png"
     
     with st.chat_message(message["role"], avatar=avatar_chat):
         st.markdown(message["content"])
@@ -203,7 +211,8 @@ if pergunta := st.chat_input("Digite sua dúvida sobre o edital..."):
         }
     )
 
-    with st.chat_message("user", avatar="aluno_avatar.png"):
+    # 🌟 Atualizado: Usa o nome correto para o balão do usuário
+    with st.chat_message("user", avatar="aluno_chatbot.png"):
         st.markdown(pergunta)
 
     with st.chat_message("assistant", avatar="byte_rosto.png"):
