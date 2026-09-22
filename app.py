@@ -26,7 +26,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# PERSONALIZAÇÃO VISUAL - PALETA SUMMIT TECH DARK CORRIGIDA
+# PERSONALIZAÇÃO VISUAL - PALETA TECH DARK COM CAMPO CLARO
 # ==========================================
 st.markdown("""
 <style>
@@ -46,25 +46,40 @@ h1 {
     color: #E2E8F0;
 }
 
-/* Caixa onde o usuário digita (Fundo escuro com borda neon) */
+/* Caixa onde o usuário digita (Fundo CLARO com borda neon) */
 div[data-testid="stChatInput"] {
     border: 2px solid #9933FF;
     border-radius: 14px;
-    background-color: #13111C !important;
+    background-color: #FFFFFF !important;
     box-shadow: 0 0 15px rgba(153, 51, 255, 0.3);
 }
 
-/* Força o texto digitado na caixa de entrada a ficar branco e visível */
+/* 🌟 CONFIGURAÇÃO DO CAMPO CLARO COM LETRAS PRETAS */
 div[data-testid="stChatInput"] textarea {
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
-    caret-color: #A855F7 !important;
+    background-color: #FFFFFF !important;
+    color: #1A1A1A !important;
+    -webkit-text-fill-color: #1A1A1A !important;
+    caret-color: #9933FF !important;
 }
 
-/* Torna o texto de sugestão (placeholder) legível em cinza claro */
+/* Garante o contraste preto mesmo com foco ou seleção do navegador */
+div[data-testid="stChatInput"] textarea:focus,
+div[data-testid="stChatInput"] textarea:active {
+    background-color: #FFFFFF !important;
+    color: #1A1A1A !important;
+    -webkit-text-fill-color: #1A1A1A !important;
+}
+
+/* Torna o texto de sugestão (placeholder) legível em cinza escuro sutil */
 div[data-testid="stChatInput"] textarea::placeholder {
-    color: #A0AEC0 !important;
-    -webkit-text-fill-color: #A0AEC0 !important;
+    color: #718096 !important;
+    -webkit-text-fill-color: #718096 !important;
+}
+
+/* Botão de enviar dentro da caixa de texto */
+div[data-testid="stChatInput"] button {
+    background-color: #9933FF !important;
+    color: #FFFFFF !important;
 }
 
 /* Mensagens do chat (Fundo Dark Tech com borda lateral brilhante) */
@@ -77,9 +92,29 @@ div[data-testid="stChatMessage"] {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
-/* Força o texto dentro dos balões de mensagens anteriores a ficar branco */
-div[data-testid="stChatMessage"] p, div[data-testid="stChatMessage"] li {
+/* Força todo o texto interno das respostas a ficar branco */
+div[data-testid="stChatMessage"] p, 
+div[data-testid="stChatMessage"] li, 
+div[data-testid="stChatMessage"] td, 
+div[data-testid="stChatMessage"] th,
+div[data-testid="stChatMessage"] span {
     color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+}
+
+/* Estilização das tabelas */
+div[data-testid="stChatMessage"] table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 10px;
+}
+div[data-testid="stChatMessage"] th, div[data-testid="stChatMessage"] td {
+    border: 1px solid #3A354A !important;
+    padding: 8px !important;
+    text-align: left;
+}
+div[data-testid="stChatMessage"] th {
+    background-color: #1E1A2E !important;
 }
 
 /* Aumenta o tamanho físico das imagens dos avatares no chat */
@@ -187,14 +222,13 @@ if erro:
     st.stop()
 
 # ==========================================
-# 5. HISTÓRICO DAS MENSAGENS (COM OS NOVOS AVATARES 3D CORRIGIDOS)
+# 5. HISTÓRICO DAS MENSAGENS (NOMES REAIS)
 # ==========================================
 if "mensagens" not in st.session_state:
     st.session_state.mensagens = []
 
 for message in st.session_state.mensagens:
-    # 🌟 Atualizado: Mapeia para o nome real aluno_chatbot.png
-    avatar_chat = "byte_rosto.png" if message["role"] == "assistant" else "aluno_chatbot.png"
+    avatar_chat = "byte_fundo_branco.png" if message["role"] == "assistant" else "aluno_chatbot.png"
     
     with st.chat_message(message["role"], avatar=avatar_chat):
         st.markdown(message["content"])
@@ -211,11 +245,10 @@ if pergunta := st.chat_input("Digite sua dúvida sobre o edital..."):
         }
     )
 
-    # 🌟 Atualizado: Usa o nome correto para o balão do usuário
     with st.chat_message("user", avatar="aluno_chatbot.png"):
         st.markdown(pergunta)
 
-    with st.chat_message("assistant", avatar="byte_rosto.png"):
+    with st.chat_message("assistant", avatar="byte_fundo_branco.png"):
         with st.spinner("Pesquisando no edital..."):
             try:
                 documentos_relacionados = retriever.invoke(pergunta)
